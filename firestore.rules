@@ -1,0 +1,148 @@
+rules_version = '2';
+
+/**
+ * Reglas de seguridad de Firestore para el registro de alumnos del dojang.
+ *
+ * - Crear: público, pero sólo se aceptan documentos con los tipos y campos
+ *   obligatorios correctos.
+ * - Leer, modificar y borrar: sólo el usuario administrador.
+ *
+ * IMPORTANTE: si cambiás el usuario administrador, actualizá ADMIN_EMAIL y
+ * ADMIN_UID, y también las variables NEXT_PUBLIC_ADMIN_EMAIL /
+ * NEXT_PUBLIC_ADMIN_UID del `.env.local`. El email debe ser EXACTAMENTE el
+ * mismo que usás para iniciar sesión (Firebase guarda los correos en
+ * minúsculas).
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------
+    // Administrador
+    // ------------------------------------------------------------------
+    // Correo del administrador (debe existir en Firebase Authentication).
+    function ADMIN_EMAIL() {
+      return 'admin@kwando.com';
+    }
+
+    // UID del administrador. Si completás el UID, sólo ese usuario puede
+    // entrar al panel (aun si el correo cambia). Para generarlo:
+    // Authentication > Users > copiar UID del usuario.
+    function ADMIN_UID() {
+      return 'aHhApupCAWeN0umg6kfsSvPxJxk1';
+    }
+
+    function esAdmin() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && (
+          request.auth.token.email == ADMIN_EMAIL()
+          || (ADMIN_UID() != '' && request.auth.uid == ADMIN_UID())
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // Validación del documento de alumno
+    // ------------------------------------------------------------------
+    function esAlumnoValido() {
+      let d = request.resource.data;
+
+      return
+        // Sólo se admiten exactamente estos campos: `hasOnly()` exige que
+        // estén todos presentes y que no haya ningún otro.
+        d.keys().hasOnly([
+          'nombre',
+          'fechaNacimiento',
+          'edad',
+          'correo',
+          'celular',
+          'estatura',
+          'peso',
+          'graduacion',
+          'tieneEnfermedades',
+          'descripcionEnfermedades',
+          'esMenor',
+          'nombreTutor',
+          'celularTutor',
+          'telefonoEmergencia',
+          'creadoEn'
+        ])
+
+        // --- Datos personales ---
+        && d.nombre is string
+        && d.nombre.size() >= 3
+        && d.nombre.size() <= 120
+
+        && d.fechaNacimiento is string
+        && d.fechaNacimiento.size() == 10
+
+        && d.edad is int
+        && d.edad >= 0
+        && d.edad <= 120
+
+        // --- Contacto ---
+        && d.correo is string
+        && d.correo.size() >= 5
+        && d.correo.size() <= 120
+
+        && d.celular is string
+        && d.celular.size() >= 7
+        && d.celular.size() <= 30
+
+        // --- Medidas ---
+        && d.estatura is number
+        && d.estatura >= 50
+        && d.estatura <= 250
+
+        && d.peso is number
+        && d.peso >= 10
+        && d.peso <= 200
+
+        // --- Graduación ---
+        && d.graduacion is string
+        && d.graduacion.size() > 0
+        && d.graduacion.size() <= 40
+
+        // --- Salud ---
+        && d.tieneEnfermedades is bool
+        && d.descripcionEnfermedades is string
+        && d.descripcionEnfermedades.size() <= 1000
+        // Si tiene enfermedades, la descripción es obligatoria.
+        && (!d.tieneEnfermedades || d.descripcionEnfermedades.size() > 0)
+
+        // --- Tutor ---
+        && d.esMenor is bool
+        // La edad y la bandera de menor tienen que ser coherentes.
+        && d.esMenor == (d.edad < 18)
+        && d.nombreTutor is string
+        && d.celularTutor is string
+        && d.telefonoEmergencia is string
+        // Si es menor de 18 años, los datos del tutor son obligatorios.
+        && (!d.esMenor || (
+          d.nombreTutor.size() > 0
+          && d.celularTutor.size() >= 7
+          && d.telefonoEmergencia.size() >= 7
+        ))
+
+        // --- Fecha de alta (la genera el servidor) ---
+        // Con `serverTimestamp()` el valor llega ya resuelto a la regla,
+        // así que el cliente no puede inventarse la fecha de inscripción.
+        && d.creadoEn is timestamp;
+    }
+
+    // ------------------------------------------------------------------
+    // Colección de alumnos
+    // ------------------------------------------------------------------
+    match /alumnos/{alumnoId} {
+      // Alta de inscripción: pública, con validación de tipos y obligatorios.
+      allow create: if esAlumnoValido();
+
+      // Listado, detalle, edición y borrado: sólo el administrador.
+      allow read, update, delete: if esAdmin();
+    }
+
+    // Cualquier otra colección queda bloqueada por defecto.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

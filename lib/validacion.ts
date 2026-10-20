@@ -10,9 +10,12 @@ import {
   ESTATURA_MAX,
   ESTATURA_MIN,
   GRADUACIONES,
+  HORARIOS,
   PESO_MAX,
   PESO_MIN,
+  type Alumno,
   type DatosFormulario,
+  type Graduacion,
 } from "./tipos";
 /** Expresión simple para validar el formato de un correo electrónico. */
 const RE_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -155,6 +158,19 @@ export function validarFormulario(
     errores.graduacion = "La graduación seleccionada no es válida.";
   }
 
+  // Horario de clases
+  if (!datos.horarios || datos.horarios.length === 0) {
+    errores.horarios = "Elegí al menos un horario de clase.";
+  } else if (datos.horarios.length > HORARIOS.length) {
+    errores.horarios = "Hay horarios seleccionados que no son válidos.";
+  } else if (
+    datos.horarios.some(
+      (horario) => !HORARIOS.some((opcion) => opcion.valor === horario),
+    )
+  ) {
+    errores.horarios = "Hay horarios seleccionados que no son válidos.";
+  }
+
   // Enfermedades preexistentes
   if (!datos.tieneEnfermedades) {
     errores.tieneEnfermedades = "Indicá si tenés enfermedades preexistentes.";
@@ -198,6 +214,7 @@ export function prepararAlumnoParaGuardar(datos: DatosFormulario) {
     estatura: Number(datos.estatura),
     peso: Number(datos.peso),
     graduacion: datos.graduacion,
+    horarios: datos.horarios,
     tieneEnfermedades: datos.tieneEnfermedades === "si",
     descripcionEnfermedades: datos.tieneEnfermedades === "si"
       ? datos.descripcionEnfermedades.trim()
@@ -213,4 +230,32 @@ export function prepararAlumnoParaGuardar(datos: DatosFormulario) {
 /** Devuelve el formulario a su estado inicial (para registrar otro alumno). */
 export function reiniciarFormulario(): DatosFormulario {
   return { ...DATOS_INICIALES };
+}
+
+/**
+ * Convierte un alumno de Firestore en el estado del formulario, para poder
+ * editarlo desde el panel de administración.
+ */
+export function alumnoADatosFormulario(alumno: Alumno): DatosFormulario {
+  const graduacion = GRADUACIONES.includes(
+    alumno.graduacion as Graduacion,
+  )
+    ? (alumno.graduacion as Graduacion)
+    : "";
+
+  return {
+    nombre: alumno.nombre ?? "",
+    fechaNacimiento: alumno.fechaNacimiento ?? "",
+    correo: alumno.correo ?? "",
+    celular: alumno.celular ?? "",
+    estatura: String(alumno.estatura ?? ""),
+    peso: String(alumno.peso ?? ""),
+    graduacion,
+    horarios: Array.isArray(alumno.horarios) ? alumno.horarios : [],
+    tieneEnfermedades: alumno.tieneEnfermedades ? "si" : "no",
+    descripcionEnfermedades: alumno.descripcionEnfermedades ?? "",
+    nombreTutor: alumno.nombreTutor ?? "",
+    celularTutor: alumno.celularTutor ?? "",
+    telefonoEmergencia: alumno.telefonoEmergencia ?? "",
+  };
 }

@@ -41,6 +41,35 @@ service cloud.firestore {
     }
 
     // ------------------------------------------------------------------
+    // Horarios de clase
+    // ------------------------------------------------------------------
+    // Franjas habilitadas. Se guardan como texto dentro del array.
+    function HORARIOS_PERMITIDOS() {
+      return [
+        'Lunes, miércoles y viernes de 17:30 a 18:30',
+        'Lunes, miércoles y viernes de 19:00 a 20:00',
+        'Lunes, miércoles y viernes de 20:30 a 22:00'
+      ];
+    }
+
+    // Valida que el array de horarios sea correcto (tipo, cantidad y valores).
+    function horariosValidos(horarios) {
+      return horarios is list
+        && horarios.size() > 0
+        && horarios.size() <= 3
+        && horarios[0] is string
+        && horarios[0] in HORARIOS_PERMITIDOS()
+        && (horarios.size() < 2 || (
+          horarios[1] is string
+          && horarios[1] in HORARIOS_PERMITIDOS()
+        ))
+        && (horarios.size() < 3 || (
+          horarios[2] is string
+          && horarios[2] in HORARIOS_PERMITIDOS()
+        ));
+    }
+
+    // ------------------------------------------------------------------
     // Validación del documento de alumno
     // ------------------------------------------------------------------
     function esAlumnoValido() {
@@ -58,6 +87,7 @@ service cloud.firestore {
           'estatura',
           'peso',
           'graduacion',
+          'horarios',
           'tieneEnfermedades',
           'descripcionEnfermedades',
           'esMenor',
@@ -102,6 +132,9 @@ service cloud.firestore {
         && d.graduacion.size() > 0
         && d.graduacion.size() <= 40
 
+        // --- Horario de clases (obligatorio) ---
+        && horariosValidos(d.horarios)
+
         // --- Salud ---
         && d.tieneEnfermedades is bool
         && d.descripcionEnfermedades is string
@@ -136,8 +169,14 @@ service cloud.firestore {
       // Alta de inscripción: pública, con validación de tipos y obligatorios.
       allow create: if esAlumnoValido();
 
-      // Listado, detalle, edición y borrado: sólo el administrador.
-      allow read, update, delete: if esAdmin();
+      // Listado y detalle: sólo el administrador.
+      allow read: if esAdmin();
+
+      // Edición: sólo el administrador y con el documento igual de válido.
+      allow update: if esAdmin() && esAlumnoValido();
+
+      // Borrado: sólo el administrador.
+      allow delete: if esAdmin();
     }
 
     // Cualquier otra colección queda bloqueada por defecto.

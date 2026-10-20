@@ -9,8 +9,16 @@
  */
 
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import {
+  connectAuthEmulator,
+  getAuth,
+  type Auth,
+} from "firebase/auth";
+import {
+  connectFirestoreEmulator,
+  getFirestore,
+  type Firestore,
+} from "firebase/firestore";
 
 /** Configuración tomada de la consola de Firebase (ajustes del proyecto web). */
 const configuracion = {
@@ -53,6 +61,20 @@ export const auth: Auth | null = app ? getAuth(app) : null;
 
 /** Instancia de Firestore (o `null` si falta la configuración). */
 export const db: Firestore | null = app ? getFirestore(app) : null;
+
+/**
+ * Con `NEXT_PUBLIC_FIREBASE_EMULATOR=1` la app talks con los emuladores
+ * locales de Firebase (autenticación en el 9099 y Firestore en el 8080).
+ * Sirve para probar el panel sin tocar los datos reales.
+ */
+if (app && auth && db && process.env.NEXT_PUBLIC_FIREBASE_EMULATOR === "1") {
+  if (typeof window !== "undefined") {
+    connectAuthEmulator(auth, "http://127.0.0.1:9099", {
+      disableWarnings: true,
+    });
+    connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  }
+}
 
 /**
  * Devuelve Firestore o lanza un error claro si la app no está configurada.

@@ -17,6 +17,7 @@ const COLUMNAS: { clave: keyof Alumno; titulo: string; ancho: number }[] = [
   { clave: "estatura", titulo: "Estatura (cm)", ancho: 14 },
   { clave: "peso", titulo: "Peso (kg)", ancho: 12 },
   { clave: "graduacion", titulo: "Graduación", ancho: 22 },
+  { clave: "horarios", titulo: "Horarios", ancho: 44 },
   { clave: "tieneEnfermedades", titulo: "¿Tiene enfermedades?", ancho: 20 },
   {
     clave: "descripcionEnfermedades",
@@ -49,6 +50,9 @@ function aCelda(alumno: Alumno, clave: keyof Alumno): string | number {
       return alumno[clave] as number;
     case "tieneEnfermedades":
       return alumno.tieneEnfermedades ? "Sí" : "No";
+    case "horarios":
+      // Los alumnos inscriptos antes de agregar el campo no tienen horario.
+      return alumno.horarios?.length ? alumno.horarios.join(" | ") : "—";
     case "esMenor":
       return alumno.esMenor ? "Sí" : "No";
     case "creadoEn":

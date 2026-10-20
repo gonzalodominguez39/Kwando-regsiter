@@ -3,7 +3,8 @@
 Aplicación web para el registro de alumnos del dojang **Kwan-Do** (Taekwondo ITF, Argentina).
 
 - **Formulario público** (`/`): los alumnos se inscriben desde el celular.
-- **Panel de administración** (`/admin`): login con Firebase Auth, listado, buscador y exportación a Excel.
+- **Panel de administración** (`/admin`): login con Firebase Auth, listado, buscador, edición y
+  eliminación de alumnos, y exportación a Excel.
 - **Firestore**: colección `alumnos`, con reglas de seguridad que permiten el alta pública validada y reservan la lectura al administrador.
 
 Stack: **Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS 4 + Firebase (Firestore + Auth) + SheetJS (`xlsx`)**.
@@ -14,8 +15,11 @@ Stack: **Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS 4 + Fire
   y tipografía blanca. Todo el diseño es mobile-first.
 - **Rojo de acento** `#e8202c`, tomado del logo de la escuela. Se usa en el filete del encabezado,
   los títulos de sección, el botón de envío y los estados de error.
-- **Logo**: `public/KwanDo-Logo.png` (original) → `public/kwan-do-logo.png` (versión optimizada de
-  256 px y ~20 KB que se usa en la interfaz) y `app/icon.png` (favicon del sitio).
+- **Logo**: `public/kwan-do-logo.png` (versión optimizada de 256 px y ~20 KB del logo original de
+  la escuela) y `app/icon.png` + `app/favicon.ico` (favicon del sitio, generados desde el logo).
+- **Sabonim**: `public/Sabonim.webp` se muestra en una tarjeta al costado del formulario
+  (arriba en el celular, a la derecha en desktop) con la foto arriba y el nombre y el rango
+  abajo: *Esteban Gabriel Contrdi, VI Dan*.
 
 ---
 
@@ -32,6 +36,8 @@ register-app/
 │
 ├── components/
 │   ├── Logo.tsx                   # Logo de la escuela (usado en header, footer y confirmación)
+│   ├── Sabonim.tsx                # Ficha del instructor (foto + nombre + rango)
+│   ├── CamposAlumno.tsx           # Campos del alumno, compartidos entre el alta y la edición
 │   ├── Encabezado.tsx             # Cabecera negra con logo y filete rojo
 │   ├── PieDePagina.tsx            # Pie con logo y link al panel (Server Component)
 │   ├── FormularioAlumno.tsx        # Formulario público completo (Client Component)
@@ -39,7 +45,7 @@ register-app/
 │       ├── PanelAdmin.tsx          # Orquestador: sesión, carga de datos y acciones
 │       ├── LoginAdmin.tsx          # Login con email y contraseña
 │       ├── TablaAlumnos.tsx        # Tabla con el listado de alumnos
-│       └── DetalleAlumno.tsx       # Modal con la ficha completa del alumno
+│       └── DetalleAlumno.tsx       # Modal: ficha, edición y eliminación
 │
 ├── lib/
 │   ├── firebase.ts                 # Inicialización del SDK de Firebase + chequeo de admin
@@ -153,7 +159,8 @@ npm run start       # levantar el build de producción
 
 ### Probar las reglas sin tocar producción
 
-El emulador de Firestore levanta una base local con las mismas reglas:
+Los emuladores de Firebase (Authentication + Firestore) levantan una base local con las mismas
+reglas y con los mismos datos del panel:
 
 ```bash
 npm run emulators   # requiere Java (JDK 11 o superior) instalado
@@ -165,8 +172,24 @@ Apuntá la app al emulador agregando a `.env.local`:
 NEXT_PUBLIC_FIREBASE_EMULATOR=1
 ```
 
-> Si preferís no tocar el `.env.local`, podés usar `firebase use --add` con un proyecto de prueba
-> tipo `demo-*` (los proyectos `demo-*` nunca tocan datos reales).
+> Con el emulador conviene usar un proyecto de prueba tipo `demo-*` (nunca tocan datos reales)
+> y crear en el emulador de Auth un usuario con el mismo correo que `ADMIN_EMAIL()`, porque las
+> reglas comparan el correo del token.
+
+### Acciones del panel
+
+Desde `/admin` el administrador puede:
+
+- **Ver** la ficha completa de cada alumno (click en la fila).
+- **Editar** los datos: el modal pasa a un formulario con los mismos campos del alta (incluidos
+  horarios, enfermedades y datos del tutor) y las mismas validaciones.
+- **Eliminar** un alumno, con una confirmación explícita porque no se puede deshacer.
+- **Exportar** todo a Excel.
+
+Cada operación refresca el listado y avisa con un mensaje de resultado.
+
+> Los alumnos inscriptos antes de agregar el campo `horarios` no tienen ninguna franja cargada.
+> Si los editás, el formulario te va a pedir que elijas al menos una antes de guardar.
 
 ---
 
@@ -213,6 +236,7 @@ o `public` según el backend.
 | `estatura`                 | `number`  | Centímetros (50–250)                              |
 | `peso`                     | `number`  | Kilos (10–200)                                    |
 | `graduacion`               | `string`  | Una de las 9 graduaciones de la lista              |
+| `horarios`                 | `list`    | Franjas elegidas (array de texto)                   |
 | `tieneEnfermedades`        | `bool`    | `true` / `false`                                   |
 | `descripcionEnfermedades`  | `string`  | Obligatoria si `tieneEnfermedades` es `true`       |
 | `esMenor`                  | `bool`    | `true` si tiene menos de 18 años                   |
@@ -223,16 +247,21 @@ o `public` según el backend.
 
 ### Reglas de seguridad
 
-- **create**: público, pero el documento tiene que tener **exactamente** los 15 campos, con los
-  tipos correctos, la edad coherente con `esMenor`, los datos del tutor si es menor de 18 años
-  y la descripción de enfermedades si declaró tenerlas.
-- **read / update / delete**: sólo el usuario administrador (por correo y, opcionalmente, por UID).
+- **create**: público, pero el documento tiene que tener **exactamente** los 16 campos, con los
+  tipos correctos, la edad coherente con `esMenor`, los datos del tutor si es menor de 18 años,
+  la descripción de enfermedades si declaró tenerlas y al menos un horario de clase válido.
+- **read**: sólo el usuario administrador.
+- **update**: sólo el administrador, y el documento resultante tiene que seguir siendo válido
+  (mismas comprobaciones que en el alta).
+- **delete**: sólo el administrador.
 
 ---
 
 ## 6. Comportamiento del formulario
 
 - **Edad**: se calcula sola a partir de la fecha de nacimiento; no se pide.
+- **Horario**: checkboxes con las tres franjas de clase (17:30–18:30, 19:00–20:00 y 20:30–22:00,
+  los lunes, miércoles y viernes). Se puede elegir más de una, pero al menos una es obligatoria.
 - **Menores de 18 años**: aparecen los campos obligatorios de padre/madre/tutor.
 - **Enfermedades**: si la respuesta es "Sí", aparece un textarea que pasa a ser obligatorio.
 - **Errores**: cada campo muestra su mensaje en español debajo del input, y el envío se

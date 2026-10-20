@@ -8,12 +8,9 @@ import Logo from "./Logo";
 export default function Encabezado({
   titulo,
   subtitulo,
-  accion,
 }: {
   titulo: string;
   subtitulo?: string;
-  /** Contenido opcional a la derecha (por ejemplo, un link o un botón). */
-  accion?: React.ReactNode;
 }) {
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-black/92 backdrop-blur-md">
@@ -36,8 +33,6 @@ export default function Encabezado({
             </p>
           ) : null}
         </div>
-
-        {accion}
       </div>
 
       {/* Filete rojo degradado que separa el header del contenido. */}

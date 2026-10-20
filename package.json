@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "emulators": "firebase emulators:start --only firestore"
+    "emulators": "firebase emulators:start --only auth,firestore"
   },
   "dependencies": {
     "firebase": "^13.0.0",

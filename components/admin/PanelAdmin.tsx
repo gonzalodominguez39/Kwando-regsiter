@@ -13,9 +13,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   collection,
+  deleteDoc,
+  doc,
   getDocs,
   orderBy,
   query,
+  updateDoc,
   type DocumentData,
 } from "firebase/firestore";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
@@ -25,8 +28,8 @@ import {
   obtenerAuth,
   obtenerDb,
 } from "@/lib/firebase";
-import { COLECCION_ALUMNOS, type Alumno } from "@/lib/tipos";
-import { normalizarTexto } from "@/lib/validacion";
+import { COLECCION_ALUMNOS, type Alumno, type DatosFormulario } from "@/lib/tipos";
+import { normalizarTexto, prepararAlumnoParaGuardar } from "@/lib/validacion";
 import { exportarAlumnosAExcel } from "@/lib/exportarExcel";
 import DetalleAlumno from "./DetalleAlumno";
 import LoginAdmin from "./LoginAdmin";
@@ -50,6 +53,7 @@ function mapearAlumno(id: string, datos: DocumentData): Alumno {
     estatura: datos.estatura ?? 0,
     peso: datos.peso ?? 0,
     graduacion: datos.graduacion ?? "",
+    horarios: Array.isArray(datos.horarios) ? datos.horarios : [],
     tieneEnfermedades: Boolean(datos.tieneEnfermedades),
     descripcionEnfermedades: datos.descripcionEnfermedades ?? "",
     esMenor: Boolean(datos.esMenor),
@@ -137,8 +141,8 @@ export default function PanelAdmin() {
     };
   }, [esAdmin, consultarAlumnos, aplicarAlumnos]);
 
-  /** Recarga manual del listado (botón "Actualizar"). */
-  async function manejarActualizacion() {
+  /** Recarga el listado (botón "Actualizar" y después de editar o borrar). */
+  async function recargarAlumnos() {
     setCargandoAlumnos(true);
     try {
       aplicarAlumnos(await consultarAlumnos());
@@ -184,6 +188,35 @@ export default function PanelAdmin() {
       console.error(error);
       setMensaje("No se pudo generar el archivo Excel. Intentá de nuevo.");
     }
+  }
+
+  /** Guarda los cambios de un alumno y refresca el listado. */
+  async function manejarGuardar(datos: DatosFormulario) {
+    if (!alumnoSeleccionado) return;
+
+    await updateDoc(
+      doc(obtenerDb(), COLECCION_ALUMNOS, alumnoSeleccionado.id),
+      prepararAlumnoParaGuardar(datos),
+    );
+
+    setAlumnoSeleccionado(null);
+    await recargarAlumnos();
+    setMensaje(`Se actualizaron los datos de ${alumnoSeleccionado.nombre}.`);
+  }
+
+  /** Borra un alumno y refresca el listado. */
+  async function manejarEliminar() {
+    if (!alumnoSeleccionado) return;
+
+    const nombre = alumnoSeleccionado.nombre;
+
+    await deleteDoc(
+      doc(obtenerDb(), COLECCION_ALUMNOS, alumnoSeleccionado.id),
+    );
+
+    setAlumnoSeleccionado(null);
+    await recargarAlumnos();
+    setMensaje(`Se eliminó la inscripción de ${nombre}.`);
   }
 
   // ------------------------------------------------------------------
@@ -298,7 +331,7 @@ export default function PanelAdmin() {
         </p>
         <button
           type="button"
-          onClick={() => void manejarActualizacion()}
+          onClick={() => void recargarAlumnos()}
           disabled={cargandoAlumnos}
           className="text-sm font-medium text-acento-texto underline underline-offset-4 transition-colors hover:text-white disabled:opacity-50"
         >
@@ -319,6 +352,8 @@ export default function PanelAdmin() {
         <DetalleAlumno
           alumno={alumnoSeleccionado}
           onCerrar={() => setAlumnoSeleccionado(null)}
+          onGuardar={manejarGuardar}
+          onEliminar={manejarEliminar}
         />
       ) : null}
     </div>

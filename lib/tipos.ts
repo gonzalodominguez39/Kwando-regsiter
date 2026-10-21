@@ -48,6 +48,9 @@ export const MIN_DIGITOS_TELEFONO = 7;
 /** Días en que se dictan las clases. */
 export const DIAS_CLASES = "Lunes, miércoles y viernes";
 
+/** Fecha de inicio de las clases del dojang. */
+export const INICIO_CLASES = "2 de noviembre";
+
 /**
  * Franjas horarias posibles.
  * `valor` es lo que se guarda en Firestore y lo que sale en el Excel.

@@ -14,41 +14,17 @@
 
 import { useState, type FormEvent } from "react";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { FaPaperPlane, FaUserPlus } from "react-icons/fa";
 import { firebaseConfigurado, obtenerDb } from "@/lib/firebase";
 import {
   COLECCION_ALUMNOS,
   DATOS_INICIALES,
   type DatosFormulario,
 } from "@/lib/tipos";
-import { prepararAlumnoParaGuardar, validarFormulario } from "@/lib/validacion";
+import { prepararAlumnoParaGuardar, validarFormulario, horariosPermitidosParaEdad, calcularEdad } from "@/lib/validacion";
 import CamposAlumno from "./CamposAlumno";
 import Logo from "./Logo";
-
-/** Spinner que gira durante el envío. */
-function Spinner() {
-  return (
-    <svg
-      className="h-5 w-5 animate-spin"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-90"
-        fill="currentColor"
-        d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"
-      />
-    </svg>
-  );
-}
+import Spinner from "./Spinner";
 
 export default function FormularioAlumno() {
   const [datos, setDatos] = useState<DatosFormulario>({ ...DATOS_INICIALES });
@@ -64,6 +40,14 @@ export default function FormularioAlumno() {
     // Si el alumno pasa a "No" en enfermedades, se limpia la descripción.
     if (campo === "tieneEnfermedades" && valor !== "si") {
       nuevos.descripcionEnfermedades = "";
+    }
+
+    // La franja horaria depende de la edad: se ajusta al cambiar la fecha.
+    if (campo === "fechaNacimiento") {
+      nuevos.horarios = horariosPermitidosParaEdad(
+        nuevos.horarios,
+        calcularEdad(valor),
+      );
     }
 
     setDatos(nuevos);
@@ -149,8 +133,9 @@ export default function FormularioAlumno() {
           <button
             type="button"
             onClick={() => setEnviado(false)}
-            className="mt-7 inline-flex min-h-12 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition-colors hover:border-acento hover:bg-acento/10"
+            className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition-colors hover:border-acento hover:bg-acento/10"
           >
+            <FaUserPlus className="h-4 w-4" />
             Registrar otro alumno
           </button>
         </div>
@@ -223,7 +208,10 @@ export default function FormularioAlumno() {
                 Enviando inscripción…
               </>
             ) : (
-              "Enviar inscripción"
+              <>
+                <FaPaperPlane className="h-5 w-5" />
+                Enviar inscripción
+              </>
             )}
           </button>
 

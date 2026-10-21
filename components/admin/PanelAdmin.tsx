@@ -22,6 +22,7 @@ import {
   type DocumentData,
 } from "firebase/firestore";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
+import { FaFileExcel, FaSignOutAlt, FaSyncAlt } from "react-icons/fa";
 import {
   esUsuarioAdmin,
   firebaseConfigurado,
@@ -31,6 +32,8 @@ import {
 import { COLECCION_ALUMNOS, type Alumno, type DatosFormulario } from "@/lib/tipos";
 import { normalizarTexto, prepararAlumnoParaGuardar } from "@/lib/validacion";
 import { exportarAlumnosAExcel } from "@/lib/exportarExcel";
+import Logo from "@/components/Logo";
+import Spinner from "@/components/Spinner";
 import DetalleAlumno from "./DetalleAlumno";
 import LoginAdmin from "./LoginAdmin";
 import TablaAlumnos from "./TablaAlumnos";
@@ -125,6 +128,7 @@ export default function PanelAdmin() {
 
     (async () => {
       try {
+        if (vigente) setCargandoAlumnos(true);
         const lista = await consultarAlumnos();
         if (!vigente) return;
         aplicarAlumnos(lista);
@@ -237,9 +241,18 @@ export default function PanelAdmin() {
 
   if (cargandoSesion) {
     return (
-      <p className="py-12 text-center text-sm text-humo-2">
-        Verificando la sesión…
-      </p>
+      <div
+        role="status"
+        aria-live="polite"
+        className="mx-auto flex w-full max-w-sm flex-col items-center gap-5 rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-10 text-center shadow-2xl shadow-black/60 backdrop-blur-sm"
+      >
+        <Logo className="h-20 w-20 animate-pulse drop-shadow-[0_0_24px_rgba(232,32,44,0.45)]" />
+
+        <div className="flex items-center gap-2.5 text-sm font-medium text-humo">
+          <Spinner className="text-acento-texto" />
+          Verificando la sesión…
+        </div>
+      </div>
     );
   }
 
@@ -260,8 +273,9 @@ export default function PanelAdmin() {
         <button
           type="button"
           onClick={manejarCierreSesion}
-          className="mt-6 min-h-12 w-full rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-acento hover:bg-acento/10"
+          className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-acento hover:bg-acento/10"
         >
+          <FaSignOutAlt className="h-4 w-4" />
           Cerrar sesión
         </button>
       </section>
@@ -293,16 +307,18 @@ export default function PanelAdmin() {
           <button
             type="button"
             onClick={manejarCierreSesion}
-            className="min-h-12 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition-colors hover:border-acento hover:bg-acento/10"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition-colors hover:border-acento hover:bg-acento/10"
           >
+            <FaSignOutAlt className="h-4 w-4" />
             Cerrar sesión
           </button>
           <button
             type="button"
             onClick={manejarExportacion}
             disabled={alumnos.length === 0}
-            className="min-h-12 rounded-xl bg-gradient-to-b from-acento to-acento-oscuro px-4 py-3 text-sm font-bold text-white shadow-lg shadow-acento/20 transition-all hover:from-acento-oscuro hover:to-acento-oscuro disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-acento to-acento-oscuro px-4 py-3 text-sm font-bold text-white shadow-lg shadow-acento/20 transition-all hover:from-acento-oscuro hover:to-acento-oscuro disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
           >
+            <FaFileExcel className="h-4 w-4" />
             Exportar a Excel
           </button>
         </div>
@@ -333,14 +349,31 @@ export default function PanelAdmin() {
           type="button"
           onClick={() => void recargarAlumnos()}
           disabled={cargandoAlumnos}
-          className="text-sm font-medium text-acento-texto underline underline-offset-4 transition-colors hover:text-white disabled:opacity-50"
+          className="inline-flex items-center gap-2 text-sm font-medium text-acento-texto underline underline-offset-4 transition-colors hover:text-white disabled:opacity-50"
         >
-          {cargandoAlumnos ? "Actualizando…" : "Actualizar"}
+          {cargandoAlumnos ? (
+            <>
+              <Spinner tamano="sm" />
+              Actualizando…
+            </>
+          ) : (
+            <>
+              <FaSyncAlt className="h-3.5 w-3.5" />
+              Actualizar
+            </>
+          )}
         </button>
       </div>
 
       {cargandoAlumnos && alumnos.length === 0 ? (
-        <p className="py-12 text-center text-sm text-humo-2">Cargando alumnos…</p>
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] py-16 shadow-2xl shadow-black/50 backdrop-blur-sm"
+        >
+          <Spinner tamano="lg" className="text-acento-texto" />
+          <p className="text-sm font-medium text-humo">Sincronizando alumnos…</p>
+        </div>
       ) : (
         <TablaAlumnos
           alumnos={alumnosFiltrados}

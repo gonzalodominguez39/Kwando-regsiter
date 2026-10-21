@@ -43,30 +43,28 @@ service cloud.firestore {
     // ------------------------------------------------------------------
     // Horarios de clase
     // ------------------------------------------------------------------
-    // Franjas habilitadas. Se guardan como texto dentro del array.
-    function HORARIOS_PERMITIDOS() {
-      return [
-        'Lunes, miércoles y viernes de 17:30 a 18:30',
-        'Lunes, miércoles y viernes de 19:00 a 20:00',
-        'Lunes, miércoles y viernes de 20:30 a 22:00'
-      ];
+    // La franja depende de la edad: de 4 a 16 años sólo la de la tarde y de
+    // 17 años en adelante sólo la de la noche.
+    function HORARIO_TARDE() {
+      return 'Lunes, miércoles y viernes de 18:30 a 19:45';
     }
 
-    // Valida que el array de horarios sea correcto (tipo, cantidad y valores).
-    function horariosValidos(horarios) {
+    function HORARIO_NOCHE() {
+      return 'Lunes, miércoles y viernes de 20:30 a 22:00';
+    }
+
+    function EDAD_MAXIMA_FRANJA_TARDE() {
+      return 16;
+    }
+
+    // Valida que el horario sea el que corresponde a la edad del alumno.
+    function horarioValido(horarios, edad) {
       return horarios is list
-        && horarios.size() > 0
-        && horarios.size() <= 3
-        && horarios[0] is string
-        && horarios[0] in HORARIOS_PERMITIDOS()
-        && (horarios.size() < 2 || (
-          horarios[1] is string
-          && horarios[1] in HORARIOS_PERMITIDOS()
-        ))
-        && (horarios.size() < 3 || (
-          horarios[2] is string
-          && horarios[2] in HORARIOS_PERMITIDOS()
-        ));
+        && horarios.size() == 1
+        && (
+          (edad <= EDAD_MAXIMA_FRANJA_TARDE() && horarios[0] == HORARIO_TARDE())
+          || (edad > EDAD_MAXIMA_FRANJA_TARDE() && horarios[0] == HORARIO_NOCHE())
+        );
     }
 
     // ------------------------------------------------------------------
@@ -106,7 +104,7 @@ service cloud.firestore {
         && d.fechaNacimiento.size() == 10
 
         && d.edad is int
-        && d.edad >= 0
+        && d.edad >= 4
         && d.edad <= 120
 
         // --- Contacto ---
@@ -114,9 +112,10 @@ service cloud.firestore {
         && d.correo.size() >= 5
         && d.correo.size() <= 120
 
+        // El celular se guarda sólo con dígitos, sin el código de área (+54)
+        // ni el 9 inicial, y con al menos 9 dígitos.
         && d.celular is string
-        && d.celular.size() >= 7
-        && d.celular.size() <= 30
+        && d.celular.matches('^[0-9]{9,13}$')
 
         // --- Medidas ---
         && d.estatura is number
@@ -133,7 +132,7 @@ service cloud.firestore {
         && d.graduacion.size() <= 40
 
         // --- Horario de clases (obligatorio) ---
-        && horariosValidos(d.horarios)
+        && horarioValido(d.horarios, d.edad)
 
         // --- Salud ---
         && d.tieneEnfermedades is bool
@@ -152,8 +151,8 @@ service cloud.firestore {
         // Si es menor de 18 años, los datos del tutor son obligatorios.
         && (!d.esMenor || (
           d.nombreTutor.size() > 0
-          && d.celularTutor.size() >= 7
-          && d.telefonoEmergencia.size() >= 7
+          && d.celularTutor.matches('^[0-9]{9,13}$')
+          && d.telefonoEmergencia.matches('^[0-9]{7,13}$')
         ))
 
         // --- Fecha de alta (la genera el servidor) ---

@@ -5,6 +5,7 @@
 
 import * as XLSX from "xlsx";
 import type { Alumno } from "./tipos";
+import { formatearParaWhatsApp } from "./telefono";
 import { hoyEnISO } from "./validacion";
 
 /** Definición de cada columna del Excel, en el orden en que se exportan. */
@@ -60,9 +61,15 @@ function aCelda(alumno: Alumno, clave: keyof Alumno): string | number {
     case "descripcionEnfermedades":
       return alumno.descripcionEnfermedades || "";
     case "nombreTutor":
-    case "celularTutor":
     case "telefonoEmergencia":
       return (alumno[clave] as string) || "";
+    // Los celulares salen con el formato internacional (+54 9 ...).
+    case "celular":
+      return alumno.celular ? formatearParaWhatsApp(alumno.celular) : "";
+    case "celularTutor":
+      return alumno.celularTutor
+        ? formatearParaWhatsApp(alumno.celularTutor)
+        : "";
     default:
       return (alumno[clave] as string) ?? "";
   }

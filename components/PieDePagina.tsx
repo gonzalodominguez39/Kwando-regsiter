@@ -3,6 +3,7 @@
  */
 
 import Link from "next/link";
+import { FaLock } from "react-icons/fa";
 import Logo from "./Logo";
 
 /**
@@ -29,8 +30,9 @@ export default function PieDePagina() {
 
         <Link
           href="/admin"
-          className="text-xs font-medium text-humo underline underline-offset-4 transition-colors hover:text-acento-texto"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-humo underline underline-offset-4 transition-colors hover:text-acento-texto"
         >
+          <FaLock className="h-3.5 w-3.5" />
           Acceso del administrador
         </Link>
       </div>

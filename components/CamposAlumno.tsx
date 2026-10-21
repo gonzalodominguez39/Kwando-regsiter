@@ -9,12 +9,14 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import {
   DIAS_CLASES,
+  EDAD_MAXIMA_FRANJA_TARDE,
   EDAD_MAYORIDAD,
+  EDAD_MINIMA,
   GRADUACIONES,
   HORARIOS,
   type DatosFormulario,
 } from "@/lib/tipos";
-import { calcularEdad, hoyEnISO } from "@/lib/validacion";
+import { calcularEdad, franjasParaEdad, hoyEnISO } from "@/lib/validacion";
 
 /** Clases base de los campos de texto del formulario. */
 export const CLASE_CAMPO =
@@ -98,6 +100,9 @@ export default function CamposAlumno({
   /** Edad calculada a partir de la fecha de nacimiento (no se pide al usuario). */
   const edad = calcularEdad(datos.fechaNacimiento);
   const esMenor = edad !== null && edad < EDAD_MAYORIDAD;
+
+  /** Franjas que puede elegir según la edad. */
+  const franjas = franjasParaEdad(edad);
 
   /**
    * Fecha máxima del selector (hoy). Se aplica directamente sobre el input
@@ -196,14 +201,15 @@ export default function CamposAlumno({
             id={`${prefijo}-celular`}
             etiqueta="Número de celular"
             error={errorDe("celular")}
+            ayuda="Sólo los dígitos: sin el código de área (+54) ni el 9. Mínimo 9 dígitos. Ej: 1123456789"
           >
             <input
               id={`${prefijo}-celular`}
               name="celular"
               type="tel"
-              inputMode="tel"
+              inputMode="numeric"
               autoComplete="tel"
-              placeholder="+54 9 11 1234 5678"
+              placeholder="Sin código de área ni 9"
               value={datos.celular}
               onChange={(e) => onCambio("celular", e.target.value)}
               aria-invalid={Boolean(errorDe("celular"))}
@@ -284,15 +290,19 @@ export default function CamposAlumno({
         <div>
           <TituloSeccion>Elegí tu horario</TituloSeccion>
           <p className="mt-1 pl-4 text-xs text-humo-2">
-            Las clases se dictan los {DIAS_CLASES.toLowerCase()}. Podés elegir
-            más de una franja.
+            Las clases se dictan los {DIAS_CLASES.toLowerCase()}.
+          </p>
+          <p className="mt-1 pl-4 text-xs text-humo-2">
+            {edad === null
+              ? `De ${EDAD_MINIMA} a ${EDAD_MAXIMA_FRANJA_TARDE} años: ${HORARIOS[0].franja}. De ${EDAD_MAXIMA_FRANJA_TARDE + 1} años en adelante: ${HORARIOS[1].franja}. Cargá tu fecha de nacimiento y te mostramos la que te corresponde.`
+              : `Con ${edad} años te corresponde la franja de ${franjas[0].franja}.`}
           </p>
         </div>
 
         <fieldset className="flex flex-col gap-3">
           <legend className="sr-only">Horarios de clase</legend>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {HORARIOS.map((horario) => {
+          <div className="grid gap-3 sm:grid-cols-2">
+            {franjas.map((horario) => {
               const seleccionado = datos.horarios.includes(horario.valor);
               return (
                 <label
@@ -308,9 +318,11 @@ export default function CamposAlumno({
                     name="horarios"
                     value={horario.valor}
                     checked={seleccionado}
-                    onChange={(e) =>
-                      onAlternarHorario(horario.valor, e.target.checked)
-                    }
+                    onChange={(e) => {
+                      // Con una sola franja disponible no se puede dejar sin elegir.
+                      if (franjas.length === 1 && !e.target.checked) return;
+                      onAlternarHorario(horario.valor, e.target.checked);
+                    }}
                     className="h-5 w-5 shrink-0 rounded accent-acento"
                   />
                   <span className="flex flex-col">
@@ -433,13 +445,15 @@ export default function CamposAlumno({
               id={`${prefijo}-celularTutor`}
               etiqueta="Celular del tutor"
               error={errorDe("celularTutor")}
+              ayuda="Mínimo 9 dígitos, sin el código de área ni el 9."
             >
               <input
                 id={`${prefijo}-celularTutor`}
                 name="celularTutor"
                 type="tel"
-                inputMode="tel"
+                inputMode="numeric"
                 autoComplete="tel"
+                placeholder="Sin código de área ni 9"
                 value={datos.celularTutor}
                 onChange={(e) => onCambio("celularTutor", e.target.value)}
                 aria-invalid={Boolean(errorDe("celularTutor"))}
@@ -451,13 +465,14 @@ export default function CamposAlumno({
               id={`${prefijo}-telefonoEmergencia`}
               etiqueta="Teléfono de emergencia"
               error={errorDe("telefonoEmergencia")}
-              ayuda="Puede ser el mismo del tutor."
+              ayuda="Mínimo 7 dígitos. Puede ser el mismo del tutor."
             >
               <input
                 id={`${prefijo}-telefonoEmergencia`}
                 name="telefonoEmergencia"
                 type="tel"
-                inputMode="tel"
+                inputMode="numeric"
+                placeholder="Sin código de área ni 9"
                 value={datos.telefonoEmergencia}
                 onChange={(e) =>
                   onCambio("telefonoEmergencia", e.target.value)

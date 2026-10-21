@@ -5,11 +5,15 @@
 /** Graduaciones ITF disponibles para el select del formulario. */
 export const GRADUACIONES = [
   "Blanco",
+  "Blanco punta amarilla",
   "Amarillo",
-  "Naranja",
+  "Amarillo punta verde",
   "Verde",
+  "Verde punta azul",
   "Azul",
+  "Azul punta roja",
   "Rojo",
+  "Rojo punta negra",
   "Negro 1° Dan",
   "Negro 2° Dan",
   "Negro 3° Dan o superior",
@@ -31,6 +35,16 @@ export const PESO_MAX = 200;
 /** Los menores de esta edad deben cargar los datos de su tutor. */
 export const EDAD_MAYORIDAD = 18;
 
+/**
+ * Los números se cargan sin el código de área (+54) y sin el 9 inicial,
+ * así que el celular se lo pide el dojang con el característica completa.
+ */
+export const MIN_DIGITOS_CELULAR = 9;
+export const MAX_DIGITOS_CELULAR = 13;
+
+/** Mínimo de dígitos para un teléfono de emergencia (puede ser un fijo). */
+export const MIN_DIGITOS_TELEFONO = 7;
+
 /** Días en que se dictan las clases. */
 export const DIAS_CLASES = "Lunes, miércoles y viernes";
 
@@ -39,10 +53,18 @@ export const DIAS_CLASES = "Lunes, miércoles y viernes";
  * `valor` es lo que se guarda en Firestore y lo que sale en el Excel.
  */
 export const HORARIOS = [
-  { valor: "Lunes, miércoles y viernes de 17:30 a 18:30", franja: "17:30 a 18:30" },
-  { valor: "Lunes, miércoles y viernes de 19:00 a 20:00", franja: "19:00 a 20:00" },
+  { valor: "Lunes, miércoles y viernes de 18:30 a 19:45", franja: "18:30 a 19:45" },
   { valor: "Lunes, miércoles y viernes de 20:30 a 22:00", franja: "20:30 a 22:00" },
 ] as const;
+
+/** Edad mínima para inscribirse en el dojang. */
+export const EDAD_MINIMA = 4;
+
+/**
+ * Hasta esta edad (inclusive) el alumno sólo puede elegir la franja de las
+ * 18:30. A partir de los 17 años, la franja de las 20:30.
+ */
+export const EDAD_MAXIMA_FRANJA_TARDE = 16;
 
 /**
  * Estado del formulario mientras se completa.

@@ -7,7 +7,7 @@ Aplicación web para el registro de alumnos del dojang **Kwan-Do** (Taekwondo IT
   eliminación de alumnos, y exportación a Excel.
 - **Firestore**: colección `alumnos`, con reglas de seguridad que permiten el alta pública validada y reservan la lectura al administrador.
 
-Stack: **Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS 4 + Firebase (Firestore + Auth) + SheetJS (`xlsx`)**.
+Stack: **Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS 4 + Firebase (Firestore + Auth) + SheetJS (`xlsx`) + React Icons (`react-icons`)**.
 
 ### Identidad visual
 
@@ -41,16 +41,19 @@ register-app/
 │   ├── Encabezado.tsx             # Cabecera negra con logo y filete rojo
 │   ├── PieDePagina.tsx            # Pie con logo y link al panel (Server Component)
 │   ├── FormularioAlumno.tsx        # Formulario público completo (Client Component)
+│   ├── Spinner.tsx                # Indicador de carga giratorio, compartido por toda la app
 │   └── admin/
 │       ├── PanelAdmin.tsx          # Orquestador: sesión, carga de datos y acciones
 │       ├── LoginAdmin.tsx          # Login con email y contraseña
-│       ├── TablaAlumnos.tsx        # Tabla con el listado de alumnos
+│       ├── TablaAlumnos.tsx        # Tabla paginada (10 por página) con acceso a WhatsApp
+│       ├── BotonWhatsApp.tsx       # Botón que abre la conversación de WhatsApp
 │       └── DetalleAlumno.tsx       # Modal: ficha, edición y eliminación
 │
 ├── lib/
 │   ├── firebase.ts                 # Inicialización del SDK de Firebase + chequeo de admin
 │   ├── tipos.ts                    # Tipos, graduaciones y rangos válidos
 │   ├── validacion.ts               # Cálculo de edad y validaciones (funciones puras)
+│   ├── telefono.ts                 # Normalización de teléfonos y formato +54 9 para WhatsApp
 │   └── exportarExcel.ts            # Generación del .xlsx con SheetJS
 │
 ├── firestore.rules                 # Reglas de seguridad de Firestore
@@ -185,11 +188,22 @@ Desde `/admin` el administrador puede:
   horarios, enfermedades y datos del tutor) y las mismas validaciones.
 - **Eliminar** un alumno, con una confirmación explícita porque no se puede deshacer.
 - **Exportar** todo a Excel.
+- **Escribir por WhatsApp** desde la tabla o desde la ficha: el número se arma con el formato
+  internacional `+54 9 <número>` (los alumnos los cargan sin el código de área ni el 9) y abre
+  `https://wa.me/5491123456789` con un mensaje de bienvenida.
+
+El listado se **pagina de a 10 alumnos** por página, con los botones de página, "Anterior" y
+"Siguiente". El buscador por nombre se aplica sobre la lista completa y las páginas se ajustan
+solas.
 
 Cada operación refresca el listado y avisa con un mensaje de resultado.
 
 > Los alumnos inscriptos antes de agregar el campo `horarios` no tienen ninguna franja cargada.
 > Si los editás, el formulario te va a pedir que elijas al menos una antes de guardar.
+>
+> Las franjas también cambiaron (ahora son 18:30–19:30 y 20:30–22:00). Los alumnos que tienen
+> cargada una franja vieja (17:30–18:30 o 19:00–20:00) no aparecen con ninguna opción marcada:
+> al editarlos hay que volver a elegir la franja nueva que corresponda.
 
 ---
 
@@ -232,24 +246,25 @@ o `public` según el backend.
 | `fechaNacimiento`          | `string`  | Formato `AAAA-MM-DD`                              |
 | `edad`                     | `int`     | Calculada en el cliente                           |
 | `correo`                   | `string`  | Correo electrónico                                |
-| `celular`                  | `string`  | Número de celular                                 |
+| `celular`                  | `string`  | Número de celular (sólo dígitos, 9 a 13)              |
 | `estatura`                 | `number`  | Centímetros (50–250)                              |
 | `peso`                     | `number`  | Kilos (10–200)                                    |
-| `graduacion`               | `string`  | Una de las 9 graduaciones de la lista              |
-| `horarios`                 | `list`    | Franjas elegidas (array de texto)                   |
+| `graduacion`               | `string`  | Una de las 13 graduaciones de la lista             |
+| `horarios`                 | `list`    | Franja elegida según la edad (array de texto)         |
 | `tieneEnfermedades`        | `bool`    | `true` / `false`                                   |
 | `descripcionEnfermedades`  | `string`  | Obligatoria si `tieneEnfermedades` es `true`       |
 | `esMenor`                  | `bool`    | `true` si tiene menos de 18 años                   |
 | `nombreTutor`              | `string`  | Obligatorio si `esMenor`                           |
-| `celularTutor`             | `string`  | Obligatorio si `esMenor`                           |
-| `telefonoEmergencia`       | `string`  | Obligatorio si `esMenor`                           |
+| `celularTutor`             | `string`  | Obligatorio si `esMenor` (sólo dígitos, 9 a 13)        |
+| `telefonoEmergencia`       | `string`  | Obligatorio si `esMenor` (sólo dígitos, 7 a 13)        |
 | `creadoEn`                 | `timestamp` | Generado por el servidor (`serverTimestamp()`)   |
 
 ### Reglas de seguridad
 
 - **create**: público, pero el documento tiene que tener **exactamente** los 16 campos, con los
   tipos correctos, la edad coherente con `esMenor`, los datos del tutor si es menor de 18 años,
-  la descripción de enfermedades si declaró tenerlas y al menos un horario de clase válido.
+  la descripción de enfermedades si declaró tenerlas y el horario de clase que corresponde a su
+  edad (de 4 a 16 años la franja de las 18:30, de 17 años en adelante la de las 20:30).
 - **read**: sólo el usuario administrador.
 - **update**: sólo el administrador, y el documento resultante tiene que seguir siendo válido
   (mismas comprobaciones que en el alta).
@@ -260,8 +275,15 @@ o `public` según el backend.
 ## 6. Comportamiento del formulario
 
 - **Edad**: se calcula sola a partir de la fecha de nacimiento; no se pide.
-- **Horario**: checkboxes con las tres franjas de clase (17:30–18:30, 19:00–20:00 y 20:30–22:00,
-  los lunes, miércoles y viernes). Se puede elegir más de una, pero al menos una es obligatoria.
+- **Teléfonos**: el celular (y el celular del tutor) se cargan **sin el código de área (+54) y
+  sin el 9 inicial**, con un mínimo de 9 dígitos (ej: `1123456789`). El teléfono de emergencia
+  admite un fijo, con un mínimo de 7 dígitos. Los números se guardan normalizados con sólo los
+  dígitos, y el input lo aclara en el placeholder y en una leyenda debajo del campo.
+- **Horario**: el horario depende de la edad, que se calcula sola a partir de la fecha de
+  nacimiento. De **4 a 16 años** (inclusive) sólo se puede elegir la franja de **18:30 a 19:45**;
+  de **17 años en adelante** sólo la de **20:30 a 22:00**. El formulario muestra únicamente la
+  franja que corresponde, con una leyenda que lo aclara, y cambia sola si se corrige la fecha de
+  nacimiento. La edad mínima para inscribirse es de 4 años.
 - **Menores de 18 años**: aparecen los campos obligatorios de padre/madre/tutor.
 - **Enfermedades**: si la respuesta es "Sí", aparece un textarea que pasa a ser obligatorio.
 - **Errores**: cada campo muestra su mensaje en español debajo del input, y el envío se

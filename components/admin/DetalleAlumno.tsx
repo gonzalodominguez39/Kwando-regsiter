@@ -12,9 +12,19 @@
  */
 
 import { useEffect, useState, type FormEvent } from "react";
+import { FaBan, FaPen, FaSave, FaTimes, FaTrash } from "react-icons/fa";
+import { FaXmark } from "react-icons/fa6";
 import type { Alumno, DatosFormulario } from "@/lib/tipos";
-import { alumnoADatosFormulario, validarFormulario } from "@/lib/validacion";
+import {
+  alumnoADatosFormulario,
+  calcularEdad,
+  horariosPermitidosParaEdad,
+  validarFormulario,
+} from "@/lib/validacion";
 import CamposAlumno from "@/components/CamposAlumno";
+import Spinner from "@/components/Spinner";
+import { formatearParaWhatsApp } from "@/lib/telefono";
+import BotonWhatsApp from "./BotonWhatsApp";
 
 /** Formatea `YYYY-MM-DD` como `DD/MM/AAAA`. */
 function formatearFechaCorta(valor: string): string {
@@ -28,32 +38,6 @@ function formatearFechaHora(fecha: Date | null): string {
   if (!fecha) return "—";
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${pad(fecha.getDate())}/${pad(fecha.getMonth() + 1)}/${pad(fecha.getFullYear())} ${pad(fecha.getHours())}:${pad(fecha.getMinutes())}`;
-}
-
-/** Spinner de las operaciones en curso. */
-function Spinner() {
-  return (
-    <svg
-      className="h-4 w-4 animate-spin"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-90"
-        fill="currentColor"
-        d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"
-      />
-    </svg>
-  );
 }
 
 type Modo = "ver" | "editar" | "eliminar";
@@ -72,9 +56,18 @@ export default function DetalleAlumno({
   onEliminar: () => Promise<void>;
 }) {
   const [modo, setModo] = useState<Modo>("ver");
-  const [datos, setDatos] = useState<DatosFormulario>(() =>
-    alumnoADatosFormulario(alumno),
-  );
+  const [datos, setDatos] = useState<DatosFormulario>(() => {
+    const inicial = alumnoADatosFormulario(alumno);
+
+    // La franja depende de la edad: se corrige la que tenga el alumno guardado.
+    return {
+      ...inicial,
+      horarios: horariosPermitidosParaEdad(
+        inicial.horarios,
+        calcularEdad(inicial.fechaNacimiento),
+      ),
+    };
+  });
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [intentoEnvio, setIntentoEnvio] = useState(false);
   const [ocupado, setOcupado] = useState(false);
@@ -94,6 +87,14 @@ export default function DetalleAlumno({
 
     if (campo === "tieneEnfermedades" && valor !== "si") {
       nuevos.descripcionEnfermedades = "";
+    }
+
+    // La franja horaria depende de la edad: se ajusta al cambiar la fecha.
+    if (campo === "fechaNacimiento") {
+      nuevos.horarios = horariosPermitidosParaEdad(
+        nuevos.horarios,
+        calcularEdad(valor),
+      );
     }
 
     setDatos(nuevos);
@@ -174,7 +175,10 @@ export default function DetalleAlumno({
     },
     { etiqueta: "Edad", valor: `${alumno.edad} años` },
     { etiqueta: "Correo electrónico", valor: alumno.correo || "—" },
-    { etiqueta: "Celular", valor: alumno.celular || "—" },
+    {
+      etiqueta: "Celular",
+      valor: alumno.celular ? formatearParaWhatsApp(alumno.celular) : "—",
+    },
     { etiqueta: "Estatura", valor: `${alumno.estatura} cm` },
     { etiqueta: "Peso", valor: `${alumno.peso} kg` },
     { etiqueta: "Graduación", valor: alumno.graduacion },
@@ -198,7 +202,12 @@ export default function DetalleAlumno({
   if (alumno.esMenor) {
     filas.push(
       { etiqueta: "Padre, madre o tutor", valor: alumno.nombreTutor || "—" },
-      { etiqueta: "Celular del tutor", valor: alumno.celularTutor || "—" },
+      {
+        etiqueta: "Celular del tutor",
+        valor: alumno.celularTutor
+          ? formatearParaWhatsApp(alumno.celularTutor)
+          : "—",
+      },
       {
         etiqueta: "Teléfono de emergencia",
         valor: alumno.telefonoEmergencia || "—",
@@ -245,7 +254,7 @@ export default function DetalleAlumno({
               aria-label="Cerrar"
               className="flex h-9 w-9 items-center justify-center rounded-lg text-xl leading-none text-humo transition-colors hover:bg-white/10 hover:text-white disabled:opacity-40"
             >
-              ×
+              <FaXmark className="h-5 w-5" />
             </button>
           </div>
 
@@ -275,12 +284,33 @@ export default function DetalleAlumno({
                 ))}
               </dl>
 
+              {/* ---------------- WhatsApp ---------------- */}
+              {alumno.celular ? (
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  <BotonWhatsApp
+                    numero={alumno.celular}
+                    mensaje={`Hola ${alumno.nombre}, te escribimos desde Kwan-Do Taekwondo ITF.`}
+                    texto={`WhatsApp ${formatearParaWhatsApp(alumno.celular)}`}
+                    className="min-h-11"
+                  />
+                  {alumno.esMenor && alumno.celularTutor ? (
+                    <BotonWhatsApp
+                      numero={alumno.celularTutor}
+                      mensaje={`Hola ${alumno.nombreTutor || "tutor"}, te escribimos desde Kwan-Do Taekwondo ITF por ${alumno.nombre}.`}
+                      texto={`Tutor ${formatearParaWhatsApp(alumno.celularTutor)}`}
+                      className="min-h-11"
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+
               <div className="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
                 <button
                   type="button"
                   onClick={() => setModo("editar")}
                   className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-acento to-acento-oscuro px-5 py-3 text-sm font-bold text-white shadow-lg shadow-acento/20 transition-all hover:from-acento-oscuro hover:to-acento-oscuro"
                 >
+                  <FaPen className="h-4 w-4" />
                   Editar alumno
                 </button>
                 <button
@@ -288,13 +318,15 @@ export default function DetalleAlumno({
                   onClick={() => setModo("eliminar")}
                   className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-acento/50 bg-acento/10 px-5 py-3 text-sm font-semibold text-acento-texto transition-colors hover:bg-acento/20"
                 >
+                  <FaTrash className="h-4 w-4" />
                   Eliminar
                 </button>
                 <button
                   type="button"
                   onClick={onCerrar}
-                  className="flex min-h-12 flex-1 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                  className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
                 >
+                  <FaTimes className="h-4 w-4" />
                   Cerrar
                 </button>
               </div>
@@ -323,19 +355,23 @@ export default function DetalleAlumno({
                 >
                   {ocupado ? (
                     <>
-                      <Spinner />
+                      <Spinner tamano="sm" />
                       Guardando…
                     </>
                   ) : (
-                    "Guardar cambios"
+                    <>
+                      <FaSave className="h-4 w-4" />
+                      Guardar cambios
+                    </>
                   )}
                 </button>
                 <button
                   type="button"
                   onClick={() => setModo("ver")}
                   disabled={ocupado}
-                  className="flex min-h-12 flex-1 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10 disabled:opacity-50"
+                  className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10 disabled:opacity-50"
                 >
+                  <FaBan className="h-4 w-4" />
                   Cancelar
                 </button>
               </div>
@@ -365,19 +401,23 @@ export default function DetalleAlumno({
                 >
                   {ocupado ? (
                     <>
-                      <Spinner />
+                      <Spinner tamano="sm" />
                       Eliminando…
                     </>
                   ) : (
-                    "Sí, eliminar"
+                    <>
+                      <FaTrash className="h-4 w-4" />
+                      Sí, eliminar
+                    </>
                   )}
                 </button>
                 <button
                   type="button"
                   onClick={() => setModo("ver")}
                   disabled={ocupado}
-                  className="flex min-h-12 flex-1 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10 disabled:opacity-50"
+                  className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10 disabled:opacity-50"
                 >
+                  <FaBan className="h-4 w-4" />
                   Cancelar
                 </button>
               </div>

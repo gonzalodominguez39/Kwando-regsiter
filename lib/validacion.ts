@@ -6,19 +6,57 @@
 
 import {
   DATOS_INICIALES,
+  EDAD_MAXIMA_FRANJA_TARDE,
   EDAD_MAYORIDAD,
+  EDAD_MINIMA,
   ESTATURA_MAX,
   ESTATURA_MIN,
   GRADUACIONES,
   HORARIOS,
+  MAX_DIGITOS_CELULAR,
+  MIN_DIGITOS_CELULAR,
+  MIN_DIGITOS_TELEFONO,
   PESO_MAX,
   PESO_MIN,
   type Alumno,
   type DatosFormulario,
   type Graduacion,
 } from "./tipos";
+import { contarDigitos, normalizarTelefono } from "./telefono";
 /** Expresión simple para validar el formato de un correo electrónico. */
 const RE_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/**
+ * Valida un número de teléfono.
+ *
+ * El dojang lo pide sin el código de área (+54) y sin el 9 inicial, así que
+ * se rechazan los números con prefijo internacional y se exige un mínimo de
+ * dígitos.
+ */
+function validarTelefono(
+  numero: string,
+  mensajeVacio: string,
+  minimo: number,
+): string | undefined {
+  if (!numero.trim()) return mensajeVacio;
+
+  // El "+" es el código de país: se lo agrega el dojang al guardar.
+  if (numero.includes("+")) {
+    return "Ingresá el número sin el código de área ni el 9 (solo los dígitos).";
+  }
+
+  const digitos = contarDigitos(numero);
+
+  if (digitos < minimo) {
+    return `Ingresá un número de celular válido (mínimo ${minimo} dígitos).`;
+  }
+
+  if (digitos > MAX_DIGITOS_CELULAR) {
+    return "El número es demasiado largo. Ingresalo sin el código de área ni el 9.";
+  }
+
+  return undefined;
+}
 
 /**
  * Convierte un texto a minúsculas y le quita los acentos, para que la búsqueda
@@ -84,6 +122,44 @@ export function esFechaFutura(fechaNacimiento: string): boolean {
 }
 
 /**
+ * Franjas horarias que puede elegir un alumno según su edad.
+ *
+ * - De 4 a 16 años (inclusive): sólo la franja de las 18:30.
+ * - De 17 años en adelante: sólo la franja de las 20:30.
+ * - Sin edad conocida (falta la fecha de nacimiento): se muestran todas.
+ */
+export function franjasParaEdad(
+  edad: number | null,
+): { valor: string; franja: string }[] {
+  if (edad === null) return HORARIOS.map((horario) => ({ ...horario }));
+
+  return edad <= EDAD_MAXIMA_FRANJA_TARDE
+    ? [{ ...HORARIOS[0] }]
+    : [{ ...HORARIOS[1] }];
+}
+
+/**
+ * Deja los horarios seleccionados que corresponden a la edad del alumno.
+ * Si la edad ya se conoce y no queda ninguna franja válida, se asigna la que
+ * le corresponde.
+ */
+export function horariosPermitidosParaEdad(
+  horarios: string[],
+  edad: number | null,
+): string[] {
+  const permitidas = franjasParaEdad(edad).map((horario) => horario.valor);
+  const validos = (horarios ?? []).filter((horario) =>
+    permitidas.includes(horario),
+  );
+
+  if (edad !== null && validos.length === 0) {
+    return [permitidas[0]];
+  }
+
+  return validos;
+}
+
+/**
  * Valida todo el formulario.
  * Devuelve un objeto con los mensajes de error indexados por nombre de campo.
  * Un objeto vacío significa que todo está correcto.
@@ -111,6 +187,8 @@ export function validarFormulario(
     errores.fechaNacimiento = "La fecha de nacimiento no puede ser futura.";
   } else if (edad === null) {
     errores.fechaNacimiento = "La fecha de nacimiento no es válida.";
+  } else if (edad < EDAD_MINIMA) {
+    errores.fechaNacimiento = `Para inscribirte en el dojang tenés que tener al menos ${EDAD_MINIMA} años.`;
   } else if (edad > 120) {
     errores.fechaNacimiento = "Revisá la fecha de nacimiento.";
   }
@@ -124,11 +202,13 @@ export function validarFormulario(
   }
 
   // Celular
-  const celular = datos.celular.trim();
-  if (!celular) {
-    errores.celular = "Ingresá tu número de celular.";
-  } else if (celular.replace(/\D/g, "").length < 7) {
-    errores.celular = "Ingresá un número de celular válido (mínimo 7 dígitos).";
+  const errorCelular = validarTelefono(
+    datos.celular,
+    "Ingresá tu número de celular.",
+    MIN_DIGITOS_CELULAR,
+  );
+  if (errorCelular) {
+    errores.celular = errorCelular;
   }
 
   // Estatura
@@ -158,11 +238,20 @@ export function validarFormulario(
     errores.graduacion = "La graduación seleccionada no es válida.";
   }
 
-  // Horario de clases
+  // Horario de clases: cada edad tiene su franja.
+  const franjas = franjasParaEdad(edad);
+  const permitidas = franjas.map((horario) => horario.valor);
+
   if (!datos.horarios || datos.horarios.length === 0) {
-    errores.horarios = "Elegí al menos un horario de clase.";
-  } else if (datos.horarios.length > HORARIOS.length) {
-    errores.horarios = "Hay horarios seleccionados que no son válidos.";
+    errores.horarios = "Elegí el horario de clase.";
+  } else if (edad !== null) {
+    // Con la edad conocida sólo se admite la franja que le corresponde.
+    if (
+      datos.horarios.length !== 1 ||
+      !permitidas.includes(datos.horarios[0])
+    ) {
+      errores.horarios = `Con ${edad} años sólo podés elegir el horario de ${franjas[0].franja}.`;
+    }
   } else if (
     datos.horarios.some(
       (horario) => !HORARIOS.some((opcion) => opcion.valor === horario),
@@ -186,11 +275,23 @@ export function validarFormulario(
     if (!datos.nombreTutor.trim()) {
       errores.nombreTutor = "Ingresá el nombre del padre, madre o tutor.";
     }
-    if (!datos.celularTutor.trim()) {
-      errores.celularTutor = "Ingresá el celular del padre, madre o tutor.";
+
+    const errorCelularTutor = validarTelefono(
+      datos.celularTutor,
+      "Ingresá el celular del padre, madre o tutor.",
+      MIN_DIGITOS_CELULAR,
+    );
+    if (errorCelularTutor) {
+      errores.celularTutor = errorCelularTutor;
     }
-    if (!datos.telefonoEmergencia.trim()) {
-      errores.telefonoEmergencia = "Ingresá un teléfono de emergencia.";
+
+    const errorEmergencia = validarTelefono(
+      datos.telefonoEmergencia,
+      "Ingresá un teléfono de emergencia.",
+      MIN_DIGITOS_TELEFONO,
+    );
+    if (errorEmergencia) {
+      errores.telefonoEmergencia = errorEmergencia;
     }
   }
 
@@ -210,7 +311,7 @@ export function prepararAlumnoParaGuardar(datos: DatosFormulario) {
     fechaNacimiento: datos.fechaNacimiento,
     edad,
     correo: datos.correo.trim().toLowerCase(),
-    celular: datos.celular.trim(),
+    celular: normalizarTelefono(datos.celular),
     estatura: Number(datos.estatura),
     peso: Number(datos.peso),
     graduacion: datos.graduacion,
@@ -222,8 +323,10 @@ export function prepararAlumnoParaGuardar(datos: DatosFormulario) {
     esMenor,
     // Para mayores de edad estos campos quedan vacíos y no se muestran.
     nombreTutor: esMenor ? datos.nombreTutor.trim() : "",
-    celularTutor: esMenor ? datos.celularTutor.trim() : "",
-    telefonoEmergencia: esMenor ? datos.telefonoEmergencia.trim() : "",
+    celularTutor: esMenor ? normalizarTelefono(datos.celularTutor) : "",
+    telefonoEmergencia: esMenor
+      ? normalizarTelefono(datos.telefonoEmergencia)
+      : "",
   };
 }
 

@@ -11,6 +11,9 @@
   --color-acento-tenue: #2b0d11;
   --color-acento-texto: #ff7b83;
 
+  /* Verde de WhatsApp */
+  --color-whatsapp: #25d366;
+
   /* Escala de negros (superficies) */
   --color-tinta: #0a0a0b;
   --color-tinta-2: #101013;
@@ -80,10 +83,20 @@ textarea:-webkit-autofill {
   caret-color: var(--color-nube);
 }
 
-/* Los iconos del selector de fecha son oscuros en modo oscuro: se invierten. */
+/*
+ * Icono del calendario del input de fecha.
+ * Con `color-scheme: dark` (aplicado al input y a `html`) el navegador ya
+ * dibuja el icono en claro: hay que dejar de invertirlo, porque el filtro
+ * `invert()` lo dejaba en negro sobre el fondo oscuro.
+ */
 input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
-  filter: invert(1) brightness(1.6);
+  opacity: 0.9;
+}
+
+input[type="date"]:hover::-webkit-calendar-picker-indicator,
+input[type="date"]:focus::-webkit-calendar-picker-indicator {
+  opacity: 1;
 }
 
 /* Scrollbar discreto. */

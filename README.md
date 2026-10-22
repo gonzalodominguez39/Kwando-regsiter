@@ -185,7 +185,7 @@ Desde `/admin` el administrador puede:
 
 - **Ver** la ficha completa de cada alumno (click en la fila).
 - **Editar** los datos: el modal pasa a un formulario con los mismos campos del alta (incluidos
-  horarios, enfermedades y datos del tutor) y las mismas validaciones.
+  horarios, medios de pago, enfermedades y datos del tutor) y las mismas validaciones.
 - **Eliminar** un alumno, con una confirmación explícita porque no se puede deshacer.
 - **Exportar** todo a Excel.
 - **Escribir por WhatsApp** desde la tabla o desde la ficha: el número se arma con el formato
@@ -251,6 +251,7 @@ o `public` según el backend.
 | `peso`                     | `number`  | Kilos (10–200)                                    |
 | `graduacion`               | `string`  | Una de las 13 graduaciones de la lista             |
 | `horarios`                 | `list`    | Franja elegida según la edad (array de texto)         |
+| `mediosPago`               | `list`    | Uno o ambos: `transferencia`, `efectivo`             |
 | `tieneEnfermedades`        | `bool`    | `true` / `false`                                   |
 | `descripcionEnfermedades`  | `string`  | Obligatoria si `tieneEnfermedades` es `true`       |
 | `esMenor`                  | `bool`    | `true` si tiene menos de 18 años                   |
@@ -261,7 +262,7 @@ o `public` según el backend.
 
 ### Reglas de seguridad
 
-- **create**: público, pero el documento tiene que tener **exactamente** los 16 campos, con los
+- **create**: público, pero el documento tiene que tener **exactamente** los 17 campos, con los
   tipos correctos, la edad coherente con `esMenor`, los datos del tutor si es menor de 18 años,
   la descripción de enfermedades si declaró tenerlas y el horario de clase que corresponde a su
   edad (de 4 a 16 años la franja de las 18:30, de 17 años en adelante la de las 20:30).

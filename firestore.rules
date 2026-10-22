@@ -67,6 +67,17 @@ service cloud.firestore {
         );
     }
 
+    // Debe elegirse al menos un medio de pago; se permiten ambos.
+    function mediosPagoValidos(mediosPago) {
+      return mediosPago is list
+        && (
+          mediosPago == ['transferencia']
+          || mediosPago == ['efectivo']
+          || mediosPago == ['transferencia', 'efectivo']
+          || mediosPago == ['efectivo', 'transferencia']
+        );
+    }
+
     // ------------------------------------------------------------------
     // Validación del documento de alumno
     // ------------------------------------------------------------------
@@ -86,6 +97,7 @@ service cloud.firestore {
           'peso',
           'graduacion',
           'horarios',
+          'mediosPago',
           'tieneEnfermedades',
           'descripcionEnfermedades',
           'esMenor',
@@ -133,6 +145,9 @@ service cloud.firestore {
 
         // --- Horario de clases (obligatorio) ---
         && horarioValido(d.horarios, d.edad)
+
+        // --- Medio de pago (obligatorio) ---
+        && mediosPagoValidos(d.mediosPago)
 
         // --- Salud ---
         && d.tieneEnfermedades is bool

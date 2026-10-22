@@ -20,6 +20,7 @@ import {
   COLECCION_ALUMNOS,
   DATOS_INICIALES,
   type DatosFormulario,
+  type MedioPago,
 } from "@/lib/tipos";
 import { prepararAlumnoParaGuardar, validarFormulario, horariosPermitidosParaEdad, calcularEdad } from "@/lib/validacion";
 import CamposAlumno from "./CamposAlumno";
@@ -63,6 +64,21 @@ export default function FormularioAlumno() {
       horarios: marcado
         ? [...datos.horarios, valor]
         : datos.horarios.filter((horario) => horario !== valor),
+    };
+
+    setDatos(nuevos);
+    if (intentoEnvio) {
+      setErrores(validarFormulario(nuevos));
+    }
+  }
+
+  /** Marca o desmarca un medio de pago. */
+  function actualizarMedioPago(valor: MedioPago, marcado: boolean) {
+    const nuevos = {
+      ...datos,
+      mediosPago: marcado
+        ? [...datos.mediosPago, valor]
+        : datos.mediosPago.filter((medio) => medio !== valor),
     };
 
     setDatos(nuevos);
@@ -164,16 +180,16 @@ export default function FormularioAlumno() {
       onSubmit={manejarEnvio}
       noValidate
       aria-busy={enviando}
-      className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-2xl shadow-black/60 backdrop-blur-sm"
+      className="relative overflow-hidden rounded-2xl border border-zinc-600 bg-zinc-800 shadow-2xl shadow-black/60"
     >
       {/* Barra de progreso mientras se guarda la inscripción. */}
       {enviando ? (
         <div
-          className="absolute inset-x-0 top-0 z-10 h-1 overflow-hidden bg-white/10"
+          className="absolute inset-x-0 top-0 z-10 h-1 overflow-hidden bg-zinc-600"
           role="progressbar"
           aria-label="Enviando inscripción"
         >
-          <div className="h-full w-1/3 animate-indeterminada bg-gradient-to-r from-acento to-acento-texto" />
+          <div className="h-full w-1/3 animate-indeterminada bg-gradient-to-r from-amber-400 to-yellow-200" />
         </div>
       ) : null}
 
@@ -184,6 +200,7 @@ export default function FormularioAlumno() {
           mostrarErrores={intentoEnvio}
           onCambio={actualizar}
           onAlternarHorario={actualizarHorario}
+          onAlternarMedioPago={actualizarMedioPago}
         />
 
         {/* ---------------- Envío ---------------- */}
@@ -196,11 +213,11 @@ export default function FormularioAlumno() {
           </p>
         ) : null}
 
-        <div className="flex flex-col gap-3 border-t border-white/10 pt-6">
+        <div className="flex flex-col gap-3 border-t border-zinc-500/50 pt-6">
           <button
             type="submit"
             disabled={enviando}
-            className="flex min-h-13 w-full items-center justify-center gap-2.5 rounded-xl bg-gradient-to-b from-acento to-acento-oscuro px-6 py-3.5 text-base font-bold text-white shadow-lg shadow-acento/20 transition-all hover:from-acento-oscuro hover:to-acento-oscuro hover:shadow-acento/30 focus:outline-none focus-visible:ring-4 focus-visible:ring-acento/40 disabled:cursor-not-allowed disabled:opacity-70 disabled:shadow-none sm:w-auto sm:min-w-64"
+            className="flex min-h-13 w-full items-center justify-center gap-2.5 rounded-xl bg-gradient-to-b from-amber-400 to-yellow-600 px-6 py-3.5 text-base font-bold text-zinc-950 shadow-lg shadow-amber-500/20 transition-all hover:from-amber-300 hover:to-amber-500 hover:shadow-amber-400/30 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-400/40 disabled:cursor-not-allowed disabled:opacity-70 disabled:shadow-none sm:w-auto sm:min-w-64"
           >
             {enviando ? (
               <>
@@ -223,7 +240,7 @@ export default function FormularioAlumno() {
           </p>
 
           <p className="text-xs text-humo-2">
-            Los campos marcados con <span className="text-acento-texto">*</span> son
+            Los campos marcados con <span className="text-amber-300">*</span> son
             obligatorios.
           </p>
         </div>

@@ -57,6 +57,7 @@ function mapearAlumno(id: string, datos: DocumentData): Alumno {
     peso: datos.peso ?? 0,
     graduacion: datos.graduacion ?? "",
     horarios: Array.isArray(datos.horarios) ? datos.horarios : [],
+    mediosPago: Array.isArray(datos.mediosPago) ? datos.mediosPago : [],
     tieneEnfermedades: Boolean(datos.tieneEnfermedades),
     descripcionEnfermedades: datos.descripcionEnfermedades ?? "",
     esMenor: Boolean(datos.esMenor),

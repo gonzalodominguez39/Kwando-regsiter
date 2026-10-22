@@ -13,6 +13,7 @@ import {
   ESTATURA_MIN,
   GRADUACIONES,
   HORARIOS,
+  type MedioPago,
   MAX_DIGITOS_CELULAR,
   MIN_DIGITOS_CELULAR,
   MIN_DIGITOS_TELEFONO,
@@ -260,6 +261,18 @@ export function validarFormulario(
     errores.horarios = "Hay horarios seleccionados que no son válidos.";
   }
 
+  // Medios de pago
+  const mediosPagoPermitidos: MedioPago[] = ["transferencia", "efectivo"];
+  if (!datos.mediosPago || datos.mediosPago.length === 0) {
+    errores.mediosPago = "Seleccioná al menos un medio de pago.";
+  } else if (
+    datos.mediosPago.length > mediosPagoPermitidos.length ||
+    new Set(datos.mediosPago).size !== datos.mediosPago.length ||
+    datos.mediosPago.some((medio) => !mediosPagoPermitidos.includes(medio))
+  ) {
+    errores.mediosPago = "Los medios de pago seleccionados no son válidos.";
+  }
+
   // Enfermedades preexistentes
   if (!datos.tieneEnfermedades) {
     errores.tieneEnfermedades = "Indicá si tenés enfermedades preexistentes.";
@@ -316,6 +329,7 @@ export function prepararAlumnoParaGuardar(datos: DatosFormulario) {
     peso: Number(datos.peso),
     graduacion: datos.graduacion,
     horarios: datos.horarios,
+    mediosPago: datos.mediosPago,
     tieneEnfermedades: datos.tieneEnfermedades === "si",
     descripcionEnfermedades: datos.tieneEnfermedades === "si"
       ? datos.descripcionEnfermedades.trim()
@@ -355,6 +369,7 @@ export function alumnoADatosFormulario(alumno: Alumno): DatosFormulario {
     peso: String(alumno.peso ?? ""),
     graduacion,
     horarios: Array.isArray(alumno.horarios) ? alumno.horarios : [],
+    mediosPago: Array.isArray(alumno.mediosPago) ? alumno.mediosPago : [],
     tieneEnfermedades: alumno.tieneEnfermedades ? "si" : "no",
     descripcionEnfermedades: alumno.descripcionEnfermedades ?? "",
     nombreTutor: alumno.nombreTutor ?? "",

@@ -21,7 +21,7 @@ export default function Encabezado({
         />
 
         <div className="min-w-0 flex-1">
-          <p className="text-[0.6rem] font-bold uppercase tracking-[0.28em] text-acento-texto sm:text-[0.65rem]">
+          <p className="text-[0.6rem] font-bold uppercase tracking-[0.28em] text-amber-300 sm:text-[0.65rem]">
             Kwan-Do · Taekwondo ITF
           </p>
           <h1 className="truncate text-lg font-bold leading-tight text-white sm:text-xl">
@@ -35,8 +35,8 @@ export default function Encabezado({
         </div>
       </div>
 
-      {/* Filete rojo degradado que separa el header del contenido. */}
-      <div className="h-px w-full bg-gradient-to-r from-acento via-acento/50 to-transparent" />
+      {/* Filete dorado degradado que separa el header del contenido. */}
+      <div className="h-px w-full bg-gradient-to-r from-amber-400 via-amber-300/50 to-transparent" />
     </header>
   );
 }

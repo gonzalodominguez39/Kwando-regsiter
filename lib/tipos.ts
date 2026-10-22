@@ -21,6 +21,9 @@ export const GRADUACIONES = [
 
 export type Graduacion = (typeof GRADUACIONES)[number];
 
+/** Medios de pago que puede seleccionar el alumno. */
+export type MedioPago = "transferencia" | "efectivo";
+
 /** Nombre de la colección de Firestore donde se guardan los alumnos. */
 export const COLECCION_ALUMNOS = "alumnos";
 
@@ -82,6 +85,7 @@ export interface DatosFormulario {
   peso: string;
   graduacion: Graduacion | "";
   horarios: string[];
+  mediosPago: MedioPago[];
   tieneEnfermedades: "si" | "no" | "";
   descripcionEnfermedades: string;
   nombreTutor: string;
@@ -101,6 +105,7 @@ export interface Alumno {
   peso: number;
   graduacion: string;
   horarios: string[];
+  mediosPago: MedioPago[];
   tieneEnfermedades: boolean;
   descripcionEnfermedades: string;
   esMenor: boolean;
@@ -121,6 +126,7 @@ export const DATOS_INICIALES: DatosFormulario = {
   peso: "",
   graduacion: "",
   horarios: [],
+  mediosPago: [],
   tieneEnfermedades: "",
   descripcionEnfermedades: "",
   nombreTutor: "",

@@ -26,8 +26,8 @@ export default function Home() {
           {/* ---------------- Comienzan las clases ---------------- */}
           <div className="flex flex-col items-center gap-2 lg:items-start">
             <div className="flex items-center gap-3">
-              <FaCalendarDays className="h-6 w-6 shrink-0 text-acento-texto" />
-              <span className="rounded-lg border border-acento/40 bg-acento/10 px-2.5 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-acento-texto">
+              <FaCalendarDays className="h-6 w-6 shrink-0 text-amber-300" />
+              <span className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-amber-300">
                 Comenzamos
               </span>
               <h2 className="text-2xl font-bold text-white">{INICIO_CLASES}</h2>
@@ -37,7 +37,7 @@ export default function Home() {
 
           {/* ---------------- Inscripción ---------------- */}
           <div className="lg:text-right">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-acento-texto">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-300">
               Inscripción
             </p>
             <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">

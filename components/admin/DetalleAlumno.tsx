@@ -14,7 +14,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { FaBan, FaPen, FaSave, FaTimes, FaTrash } from "react-icons/fa";
 import { FaXmark } from "react-icons/fa6";
-import type { Alumno, DatosFormulario } from "@/lib/tipos";
+import type { Alumno, DatosFormulario, MedioPago } from "@/lib/tipos";
 import {
   alumnoADatosFormulario,
   calcularEdad,
@@ -117,6 +117,20 @@ export default function DetalleAlumno({
     }
   }
 
+  function actualizarMedioPago(valor: MedioPago, marcado: boolean) {
+    const nuevos = {
+      ...datos,
+      mediosPago: marcado
+        ? [...datos.mediosPago, valor]
+        : datos.mediosPago.filter((medio) => medio !== valor),
+    };
+
+    setDatos(nuevos);
+    if (intentoEnvio) {
+      setErrores(validarFormulario(nuevos));
+    }
+  }
+
   async function manejarGuardado(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (ocupado) return;
@@ -185,6 +199,10 @@ export default function DetalleAlumno({
     {
       etiqueta: "Horarios de clase",
       valor: alumno.horarios?.length ? alumno.horarios.join(" · ") : "—",
+    },
+    {
+      etiqueta: "Medios de pago",
+      valor: alumno.mediosPago?.length ? alumno.mediosPago.join(" · ") : "—",
     },
     {
       etiqueta: "¿Tiene enfermedades preexistentes?",
@@ -343,6 +361,7 @@ export default function DetalleAlumno({
                   mostrarErrores={intentoEnvio}
                   onCambio={actualizar}
                   onAlternarHorario={actualizarHorario}
+                  onAlternarMedioPago={actualizarMedioPago}
                   prefijo="edicion"
                 />
               </fieldset>

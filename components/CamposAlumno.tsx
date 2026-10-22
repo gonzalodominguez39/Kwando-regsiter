@@ -15,6 +15,7 @@ import {
   GRADUACIONES,
   HORARIOS,
   type DatosFormulario,
+  type MedioPago,
 } from "@/lib/tipos";
 import { calcularEdad, franjasParaEdad, hoyEnISO } from "@/lib/validacion";
 
@@ -24,7 +25,7 @@ export const CLASE_CAMPO =
 
 /** Borde de los campos en estado normal y de error. */
 const CLASE_BORDE =
-  "border-white/12 hover:border-white/25 focus:border-acento focus:ring-acento/20";
+  "border-zinc-500 hover:border-zinc-400 focus:border-zinc-300 focus:ring-zinc-300/20";
 const CLASE_BORDE_ERROR =
   "border-acento/70 focus:border-acento focus:ring-acento/25";
 
@@ -48,9 +49,9 @@ export function Campo({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-sm font-medium text-nube">
+      <label htmlFor={id} className="text-sm font-medium text-zinc-100">
         {etiqueta}
-        {obligatorio ? <span className="text-acento-texto"> *</span> : null}
+        {obligatorio ? <span className="text-amber-300"> *</span> : null}
       </label>
       {children}
       {ayuda && !error ? (
@@ -68,7 +69,7 @@ export function Campo({
 /** Título de sección con la barra roja de acento. */
 function TituloSeccion({ children }: { children: ReactNode }) {
   return (
-    <h2 className="flex items-center gap-3 text-base font-bold uppercase tracking-wide text-white">
+    <h2 className="flex items-center gap-3 text-base font-bold uppercase tracking-wide text-zinc-50">
       <span className="h-5 w-1 rounded-full bg-acento" />
       {children}
     </h2>
@@ -81,6 +82,7 @@ export default function CamposAlumno({
   mostrarErrores,
   onCambio,
   onAlternarHorario,
+  onAlternarMedioPago,
   prefijo = "campo",
 }: {
   datos: DatosFormulario;
@@ -89,6 +91,7 @@ export default function CamposAlumno({
   mostrarErrores: boolean;
   onCambio: (campo: keyof DatosFormulario, valor: string) => void;
   onAlternarHorario: (valor: string, marcado: boolean) => void;
+  onAlternarMedioPago: (valor: MedioPago, marcado: boolean) => void;
   /** Prefijo de los `id` del DOM para no duplicarlos. */
   prefijo?: string;
 }) {
@@ -160,17 +163,17 @@ export default function CamposAlumno({
 
           {/* La edad se calcula sola: sólo se muestra como información. */}
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-nube">Edad</span>
-            <div className="flex min-h-[3.125rem] items-center rounded-xl border border-dashed border-white/15 bg-black/30 px-4 py-3 text-base">
+            <span className="text-sm font-medium text-zinc-100">Edad</span>
+            <div className="flex min-h-[3.125rem] items-center rounded-xl border border-dashed border-zinc-500 bg-zinc-700/50 px-4 py-3 text-base">
               {edad === null ? (
-                <span className="text-white/30">Se calcula automáticamente</span>
+                <span className="text-zinc-300/60">Se calcula automáticamente</span>
               ) : (
-                <span className="font-semibold text-acento-texto">
+                <span className="font-semibold text-amber-300">
                   {edad} {edad === 1 ? "año" : "años"}
                 </span>
               )}
             </div>
-            <p className="text-xs text-humo-2">
+            <p className="text-xs text-zinc-300/70">
               {esMenor
                 ? "Al ser menor de 18 años necesitás los datos de tu tutor."
                 : "Se completa solo a partir de la fecha de nacimiento."}
@@ -286,7 +289,7 @@ export default function CamposAlumno({
       </section>
 
       {/* ---------------- Horario de clases ---------------- */}
-      <section className="flex flex-col gap-5 border-t border-white/10 pt-6">
+      <section className="flex flex-col gap-5 border-t border-zinc-500/50 pt-6">
         <div>
           <TituloSeccion>Elegí tu horario</TituloSeccion>
           <p className="mt-1 pl-4 text-xs text-humo-2">
@@ -310,7 +313,7 @@ export default function CamposAlumno({
                   className={`flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${
                     seleccionado
                       ? "border-acento bg-acento/15"
-                      : "border-white/12 hover:border-white/30"
+                      : "border-zinc-500 hover:border-zinc-300"
                   }`}
                 >
                   <input
@@ -328,7 +331,7 @@ export default function CamposAlumno({
                   <span className="flex flex-col">
                     <span
                       className={`text-sm font-bold ${
-                        seleccionado ? "text-white" : "text-humo"
+                        seleccionado ? "text-white" : "text-zinc-300"
                       }`}
                     >
                       {horario.franja}
@@ -347,14 +350,83 @@ export default function CamposAlumno({
         </fieldset>
       </section>
 
+      {/* ---------------- Medios de pago ---------------- */}
+      <section className="flex flex-col gap-5 border-t border-zinc-500/50 pt-6">
+        <div>
+          <TituloSeccion>Medio de pago</TituloSeccion>
+          <p className="mt-1 pl-4 text-xs text-zinc-300/70">
+            Podés seleccionar transferencia, efectivo o ambos.
+          </p>
+        </div>
+
+        <fieldset
+          className="flex flex-col gap-3"
+          aria-invalid={Boolean(errorDe("mediosPago"))}
+        >
+          <legend className="sr-only">Seleccioná uno o más medios de pago</legend>
+          <div className="flex flex-wrap gap-3">
+            {(
+              [
+                { valor: "transferencia", etiqueta: "Transferencia" },
+                { valor: "efectivo", etiqueta: "Efectivo" },
+              ] satisfies { valor: MedioPago; etiqueta: string }[]
+            ).map((opcion) => {
+              const seleccionado = datos.mediosPago.includes(opcion.valor);
+              return (
+                <label
+                  key={opcion.valor}
+                  className={`flex min-h-12 cursor-pointer items-center gap-2.5 rounded-xl border px-5 py-2.5 text-sm font-semibold transition-colors ${
+                    seleccionado
+                      ? "border-zinc-300 bg-zinc-600 text-white"
+                      : "border-zinc-500 text-zinc-300 hover:border-zinc-300 hover:text-white"
+                  }`}
+                >
+                  <input
+                    id={
+                      opcion.valor === "transferencia"
+                        ? `${prefijo}-mediosPago`
+                        : `${prefijo}-mediosPago-${opcion.valor}`
+                    }
+                    type="checkbox"
+                    name="mediosPago"
+                    value={opcion.valor}
+                    checked={seleccionado}
+                    onChange={(e) =>
+                      onAlternarMedioPago(opcion.valor, e.target.checked)
+                    }
+                    aria-invalid={Boolean(errorDe("mediosPago"))}
+                    aria-describedby={
+                      errorDe("mediosPago")
+                        ? `${prefijo}-error-mediosPago`
+                        : undefined
+                    }
+                    className="h-4 w-4 accent-zinc-200"
+                  />
+                  {opcion.etiqueta}
+                </label>
+              );
+            })}
+          </div>
+          {errorDe("mediosPago") ? (
+            <p
+              id={`${prefijo}-error-mediosPago`}
+              role="alert"
+              className="text-xs font-medium text-acento-texto"
+            >
+              {errores.mediosPago}
+            </p>
+          ) : null}
+        </fieldset>
+      </section>
+
       {/* ---------------- Salud ---------------- */}
-      <section className="flex flex-col gap-5 border-t border-white/10 pt-6">
+      <section className="flex flex-col gap-5 border-t border-zinc-500/50 pt-6">
         <TituloSeccion>Salud</TituloSeccion>
 
         <fieldset className="flex flex-col gap-3">
-          <legend className="text-sm font-medium text-nube">
+          <legend className="text-sm font-medium text-zinc-100">
             ¿Tiene enfermedades preexistentes?{" "}
-            <span className="text-acento-texto">*</span>
+            <span className="text-amber-300">*</span>
           </legend>
           <div className="flex flex-wrap gap-3">
             {[
@@ -367,8 +439,8 @@ export default function CamposAlumno({
                   key={opcion.valor}
                   className={`flex min-h-12 cursor-pointer items-center gap-2.5 rounded-xl border px-5 py-2.5 text-sm font-semibold transition-colors ${
                     seleccionado
-                      ? "border-acento bg-acento/15 text-white"
-                      : "border-white/12 text-humo hover:border-white/30 hover:text-white"
+                      ? "border-zinc-300 bg-zinc-600 text-white"
+                      : "border-zinc-500 text-zinc-300 hover:border-zinc-300 hover:text-white"
                   }`}
                 >
                   <input
